@@ -1,6 +1,6 @@
 Attribute VB_Name = "GoF"
 ' # GoF
-' Several model goodness-of-fit (GoF) indexes for Excel
+' Several goodness-of-fit (GoF) model indexes for Excel
 '
 '
 ' Author: Christopher Teh Boon Sung, Uni. Putra Malaysia
@@ -273,7 +273,7 @@ Function fit_d(obs As Range, est As Range)
 ' Parameters: obs = observed values; est = estimated (predicted) values
 ' Range: 0 to 1
 ' Best fit = 1, Worst fit = 0
-' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184–194.
+' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184Â–194.
 '
    Dim co() As Variant, cp() As Variant
    fit_d = FillInValues(obs, est, co, cp)
@@ -300,7 +300,7 @@ Function fit_dr(obs As Range, est As Range)
 ' Range: -1 to 1
 ' Best fit = 1, Worst fit = -1 (or lack of data/variation)
 ' Ref: Willmott, C. J., Robeson, S. M., and Matsuura, K. (2012). A refined index of model performance, International Journal of Climatolology, 32: 2088-2094.
-' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184–194.
+' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184Â–194.
 '
    Dim co() As Variant, cp() As Variant
    fit_dr = FillInValues(obs, est, co, cp)
@@ -358,7 +358,7 @@ Function fit_nse(obs As Range, est As Range)
 ' Parameters: obs = observed values; est = estimated (predicted) values
 ' Range: -INF to 1
 ' Best fit = 1, >0.75 for very good; 0.75-0.65 for good and 0.65-0.50 for satisfactory ratings
-' Ref: Nash, J. E., and Sutcliffe, J. V. (1970). River flow forecasting through conceptual models part I — A discussion of principles. Journal of Hydrology, 10: 282–290.
+' Ref: Nash, J. E., and Sutcliffe, J. V. (1970). River flow forecasting through conceptual models part I Â— A discussion of principles. Journal of Hydrology, 10: 282Â–290.
 '
    Dim co() As Variant, cp() As Variant
    fit_nse = FillInValues(obs, est, co, cp)
@@ -456,7 +456,7 @@ Function fit_mielke(obs As Range, est As Range)
 ' Range: -1 to 1
 ' Best fit = 1
 ' Ref: Duveiller, G., Fasbender, D., and Meroni, M. (2016). Revisiting the concept of a symmetric index of agreement for continuous datasets. Scientific Reports, 6(19401): 1-14.
-' Ref: Mielke, P. (1984). Meteorological applications of permutation techniques based on distance functions. In Krishnaiah, P. & Sen, P. (eds.). Handbook of Statistics Vol. 4, 813–830 (Elsevier, Amsterdam, The Netherlands.
+' Ref: Mielke, P. (1984). Meteorological applications of permutation techniques based on distance functions. In Krishnaiah, P. & Sen, P. (eds.). Handbook of Statistics Vol. 4, 813Â–830 (Elsevier, Amsterdam, The Netherlands.
 '
    Dim co() As Variant, cp() As Variant
    fit_mielke = FillInValues(obs, est, co, cp)
@@ -481,7 +481,7 @@ Function fit_pi(obs As Range, est As Range)
 ' Parameters: obs = observed values; est = estimated (predicted) values
 ' Range: -INF to 1
 ' Best fit = 1, > 0 satisfactory, <= 0 poor
-' Ref: Gupta, H. V., Sorooshian, S., and Yapo, P. O. (1998). Toward improved calibration of hydrologic models: multiple and non-commensurable measures of information. Water Resources Research, 34: 751–763.
+' Ref: Gupta, H. V., Sorooshian, S., and Yapo, P. O. (1998). Toward improved calibration of hydrologic models: multiple and non-commensurable measures of information. Water Resources Research, 34: 751Â–763.
 '
    Dim co() As Variant, cp() As Variant
    fit_pi = FillInValues(obs, est, co, cp)
@@ -502,7 +502,7 @@ Function fit_pi(obs As Range, est As Range)
 End Function
 
 Function fit_aic(obs As Range, est As Range, k As Integer, Optional bOrder2 = True)
-' Akaike’s Information Criterion (AIC)
+' AkaikeÂ’s Information Criterion (AIC)
 ' Parameters: obs = observed values; est = estimated (predicted) values;
 ' Parameters: k = no. of model parameters plus one; bOrder2 = True for second-order AIC, else False for first-order AIC
 ' Example: a simple linear regression equation, y = mx + c, has 3 parameters (m and c parameters + 1)
@@ -510,7 +510,7 @@ Function fit_aic(obs As Range, est As Range, k As Integer, Optional bOrder2 = Tr
 ' Note: by itself, AIC values have no meaning. AIC is meant to be used to
 ' compare between models, where the best model is one with the lowest AIC value.
 ' Ref: Burnham, K. P., and Anderson, D. R. (2002). Model Selection and Multimodel Inference: A practical information-theoretic approach (2nd ed.). Springer-Verlag, NY.
-' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261–304.
+' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261Â–304.
 '
    Dim co() As Variant, cp() As Variant
    aic = FillInValues(obs, est, co, cp)
@@ -545,7 +545,7 @@ Function fit_bic(obs As Range, est As Range, k As Integer)
 ' Note: by itself, BIC values have no meaning. BIC is meant to be used to
 ' compare between models, where the best model is one with the lowest BIC value.
 ' Ref: Burnham, K. P., and Anderson, D. R. (2002). Model Selection and Multimodel Inference: A practical information-theoretic approach (2nd ed.). Springer-Verlag, NY.
-' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261–304.
+' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261Â–304.
 '
    Dim co() As Variant, cp() As Variant
    aic = FillInValues(obs, est, co, cp)
