@@ -1,5 +1,5 @@
 # GoF
-Several model goodness-of-fit (GoF) indexes for Excel
+Several goodness-of-fit (GoF) model indexes for Excel
 
 
 Author: Christopher Teh Boon Sung, Uni. Putra Malaysia
