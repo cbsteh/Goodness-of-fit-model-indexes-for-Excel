@@ -7,10 +7,11 @@ Author: Christopher Teh Boon Sung, Uni. Putra Malaysia
 Contact: christeh@yahoo.com; www.christopherteh.com
 
 Initial Release: June 6, 2019
+
 Updated: June 30, 2019
 
 
-MIT -licensed:
+MIT-licensed:
 *  Free to use, copy, share, and modify
 *  Give credit to the developer somewhere in your software code or documentation
 
