@@ -8,6 +8,7 @@ Attribute VB_Name = "GoF"
 ' Contact: christeh@yahoo.com; www.christopherteh.com
 '
 ' Initial Release: June 6, 2019
+' Updated: June 30, 2019
 '
 '
 ' MIT -licensed:
@@ -32,6 +33,9 @@ Attribute VB_Name = "GoF"
 ' 1.  Persistence Index (`fit_pi`)
 ' 1.  Akaike Information Criterion (AIC) (`fit_aic`)
 ' 1.  Bayesian Information Criterion (BIC) (`fit_bic`)
+' 1.  Theil's U2 Coefficient of Inequality (UII) (`fit_theilu2`)
+' 1.  Mean Absolute Percentage Error (MAPE) (`fit_mape`)
+' 1.  Median Absolute Percentage Error (MAPE) (`fit_mdape`)
 '
 '
 ' Note:
@@ -51,20 +55,19 @@ Attribute VB_Name = "GoF"
 ' * The BIC function is used in the same way as the AIC function, except the BIC function is `fit_bic` and it has no fourth parameter, e.g., `=fit_bic(A1:A10, B1:B10, 3)`.
 '
   
-
 Private Function FillInValues(obs As Range, est As Range, co As Variant, cp As Variant)
 ' ** Internal use **
 ' Collect valid pairwise values (obs, est). Ignores any cells that contain blanks and errors or cellt that are hidden.
 ' Returns 0 if pairwise values have been collected and are valid. A return of any other value indicates one or more cells are invalid.
 '
-   Dim sz As Integer
+   Dim sz As Long
    sz = obs.Count
    If sz <> est.Count Or sz < 2 Then
       FillInValues = CVErr(xlErrValue)    ' unequal or insufficient size
       Exit Function
    End If
 
-   Dim i As Integer, n As Integer
+   Dim i As Long, n As Long
    n = 0
    For i = 1 To sz
       ' fill in values, but skip blanks, error cell values, or non-numeric cells
@@ -111,7 +114,7 @@ Private Function Average(ar() As Variant)
 ' ** Internal use **
 ' Returns the average of an array
 '
-   Dim i As Integer
+   Dim i As Long
    Dim sum As Double
    sum = 0#
    For i = LBound(ar) To UBound(ar)
@@ -129,7 +132,7 @@ Private Function Correlation(x() As Variant, y() As Variant)
    sum = 0#
    meanx = Average(x)
    meany = Average(y)
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(x) To UBound(x)
       sum = sum + ((x(i) - meanx) * (y(i) - meany))
    Next i
@@ -142,7 +145,7 @@ Private Function StdDev(ar() As Variant)
 ' ** Internal use **
 ' Returns the standard deviation of an array
 '
-   Dim i As Integer
+   Dim i As Long
    Dim sum As Double, mean As Double
    mean = Average(ar)
    sum = 0#
@@ -151,6 +154,71 @@ Private Function StdDev(ar() As Variant)
    Next i
    StdDev = (sum / (UBound(ar) - LBound(ar))) ^ 0.5
 
+End Function
+
+Private Sub Quicksort(vArray As Variant, arrLbound As Long, arrUbound As Long)
+' ** Internal use **
+' Sorts a one-dimensional VBA array from smallest to largest using a very fast quicksort algorithm variant.
+' Code from https://wellsr.com/vba/2018/excel/vba-quicksort-macro-to-sort-arrays-fast/
+'
+   Dim pivotVal As Variant
+   Dim vSwap    As Variant
+   Dim tmpLow   As Long
+   Dim tmpHi    As Long
+    
+   tmpLow = arrLbound
+   tmpHi = arrUbound
+   pivotVal = vArray((arrLbound + arrUbound) \ 2)
+    
+   While (tmpLow <= tmpHi) 'divide
+      While (vArray(tmpLow) < pivotVal And tmpLow < arrUbound)
+         tmpLow = tmpLow + 1
+      Wend
+     
+      While (pivotVal < vArray(tmpHi) And tmpHi > arrLbound)
+         tmpHi = tmpHi - 1
+      Wend
+    
+      If (tmpLow <= tmpHi) Then
+         vSwap = vArray(tmpLow)
+         vArray(tmpLow) = vArray(tmpHi)
+         vArray(tmpHi) = vSwap
+         tmpLow = tmpLow + 1
+         tmpHi = tmpHi - 1
+      End If
+   Wend
+ 
+  If (arrLbound < tmpHi) Then Quicksort vArray, arrLbound, tmpHi 'conquer
+  If (tmpLow < arrUbound) Then Quicksort vArray, tmpLow, arrUbound 'conquer
+
+End Sub
+
+Private Function Median(ar() As Variant)
+' ** Internal use **
+' Returns the median of an array
+'
+   Dim e1 As Long, e2 As Long, nlen As Long
+   Dim sum As Double, ans As Double
+   
+   Call Quicksort(ar, LBound(ar), UBound(ar))
+   nlen = (UBound(ar) - LBound(ar)) + 1
+   
+   If UBound(ar) Mod 2 = 0 Then
+      e1 = (UBound(ar) / 2) + (LBound(ar) / 2)
+   Else
+      e1 = Int(UBound(ar) / 2) + Int(LBound(ar) / 2)
+   End If
+   
+   If nlen Mod 2 <> 0 Then
+      ans = ar(e1)
+   Else
+      e2 = e1 + 1
+      sum = ar(e1) + ar(e2)
+      ans = sum / 2
+   End If
+   
+   Median = ans
+   
 End Function
 
 Function fit_mae(obs As Range, est As Range)
@@ -167,7 +235,7 @@ Function fit_mae(obs As Range, est As Range)
    
    Dim n1 As Double
    n1 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + Abs(cp(i) - co(i))
    Next i
@@ -190,7 +258,7 @@ Function fit_nmae(obs As Range, est As Range)
    Dim n1 As Double, n2 As Double
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + Abs(cp(i) - co(i))
       n2 = n2 + co(i)
@@ -214,7 +282,7 @@ Function fit_mbe(obs As Range, est As Range)
    
    Dim n1 As Double
    n1 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i))
    Next i
@@ -237,7 +305,7 @@ Function fit_nmbe(obs As Range, est As Range)
    Dim n1 As Double, n2 As Double
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i))
       n2 = n2 + co(i)
@@ -260,7 +328,7 @@ Function fit_rmse(obs As Range, est As Range)
    
    Dim n1 As Double
    n1 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i)) ^ 2
    Next i
@@ -273,7 +341,7 @@ Function fit_d(obs As Range, est As Range)
 ' Parameters: obs = observed values; est = estimated (predicted) values
 ' Range: 0 to 1
 ' Best fit = 1, Worst fit = 0
-' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184Â–194.
+' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184–194.
 '
    Dim co() As Variant, cp() As Variant
    fit_d = FillInValues(obs, est, co, cp)
@@ -285,7 +353,7 @@ Function fit_d(obs As Range, est As Range)
    mean_co = Average(co)
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + Abs(cp(i) - co(i))
       n2 = n2 + (Abs(cp(i) - mean_co) + Abs(co(i) - mean_co))
@@ -300,7 +368,7 @@ Function fit_dr(obs As Range, est As Range)
 ' Range: -1 to 1
 ' Best fit = 1, Worst fit = -1 (or lack of data/variation)
 ' Ref: Willmott, C. J., Robeson, S. M., and Matsuura, K. (2012). A refined index of model performance, International Journal of Climatolology, 32: 2088-2094.
-' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184Â–194.
+' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184–194.
 '
    Dim co() As Variant, cp() As Variant
    fit_dr = FillInValues(obs, est, co, cp)
@@ -312,7 +380,7 @@ Function fit_dr(obs As Range, est As Range)
    mean_co = Average(co)
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + Abs(cp(i) - co(i))
       n2 = n2 + Abs(co(i) - mean_co)
@@ -344,7 +412,7 @@ Function fit_rsr(obs As Range, est As Range)
    mean_co = Average(co)
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i)) ^ 2
       n2 = n2 + (co(i) - mean_co) ^ 2
@@ -358,7 +426,7 @@ Function fit_nse(obs As Range, est As Range)
 ' Parameters: obs = observed values; est = estimated (predicted) values
 ' Range: -INF to 1
 ' Best fit = 1, >0.75 for very good; 0.75-0.65 for good and 0.65-0.50 for satisfactory ratings
-' Ref: Nash, J. E., and Sutcliffe, J. V. (1970). River flow forecasting through conceptual models part I Â— A discussion of principles. Journal of Hydrology, 10: 282Â–290.
+' Ref: Nash, J. E., and Sutcliffe, J. V. (1970). River flow forecasting through conceptual models part I — A discussion of principles. Journal of Hydrology, 10: 282–290.
 '
    Dim co() As Variant, cp() As Variant
    fit_nse = FillInValues(obs, est, co, cp)
@@ -370,7 +438,7 @@ Function fit_nse(obs As Range, est As Range)
    mean_co = Average(co)
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i)) ^ 2
       n2 = n2 + (co(i) - mean_co) ^ 2
@@ -395,7 +463,7 @@ Function fit_nmse(obs As Range, est As Range)
    mean_co = Average(co)
    mean_cp = Average(cp)
    n1 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i)) ^ 2
    Next i
@@ -417,7 +485,7 @@ Function fit_fb(obs As Range, est As Range)
    
    Dim n1 As Double
    n1 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + (cp(i) - co(i)) / (0.5 * (cp(i) + co(i)))
    Next i
@@ -441,7 +509,7 @@ Function fit_coe(obs As Range, est As Range)
    mean_co = Average(co)
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       n1 = n1 + Abs(cp(i) - co(i))
       n2 = n2 + Abs(co(i) - mean_co)
@@ -456,7 +524,7 @@ Function fit_mielke(obs As Range, est As Range)
 ' Range: -1 to 1
 ' Best fit = 1
 ' Ref: Duveiller, G., Fasbender, D., and Meroni, M. (2016). Revisiting the concept of a symmetric index of agreement for continuous datasets. Scientific Reports, 6(19401): 1-14.
-' Ref: Mielke, P. (1984). Meteorological applications of permutation techniques based on distance functions. In Krishnaiah, P. & Sen, P. (eds.). Handbook of Statistics Vol. 4, 813Â–830 (Elsevier, Amsterdam, The Netherlands.
+' Ref: Mielke, P. (1984). Meteorological applications of permutation techniques based on distance functions. In Krishnaiah, P. & Sen, P. (eds.). Handbook of Statistics Vol. 4, 813–830 (Elsevier, Amsterdam, The Netherlands.
 '
    Dim co() As Variant, cp() As Variant
    fit_mielke = FillInValues(obs, est, co, cp)
@@ -481,7 +549,7 @@ Function fit_pi(obs As Range, est As Range)
 ' Parameters: obs = observed values; est = estimated (predicted) values
 ' Range: -INF to 1
 ' Best fit = 1, > 0 satisfactory, <= 0 poor
-' Ref: Gupta, H. V., Sorooshian, S., and Yapo, P. O. (1998). Toward improved calibration of hydrologic models: multiple and non-commensurable measures of information. Water Resources Research, 34: 751Â–763.
+' Ref: Gupta, H. V., Sorooshian, S., and Yapo, P. O. (1998). Toward improved calibration of hydrologic models: multiple and non-commensurable measures of information. Water Resources Research, 34: 751–763.
 '
    Dim co() As Variant, cp() As Variant
    fit_pi = FillInValues(obs, est, co, cp)
@@ -492,7 +560,7 @@ Function fit_pi(obs As Range, est As Range)
    Dim n1 As Double, n2 As Double
    n1 = 0#
    n2 = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co) - 1
       n1 = n1 + (cp(i + 1) - co(i + 1)) ^ 2
       n2 = n2 + (co(i + 1) - co(i)) ^ 2
@@ -501,8 +569,8 @@ Function fit_pi(obs As Range, est As Range)
 
 End Function
 
-Function fit_aic(obs As Range, est As Range, k As Integer, Optional bOrder2 = True)
-' AkaikeÂ’s Information Criterion (AIC)
+Function fit_aic(obs As Range, est As Range, k As Long, Optional bOrder2 = True)
+' Akaike’s Information Criterion (AIC)
 ' Parameters: obs = observed values; est = estimated (predicted) values;
 ' Parameters: k = no. of model parameters plus one; bOrder2 = True for second-order AIC, else False for first-order AIC
 ' Example: a simple linear regression equation, y = mx + c, has 3 parameters (m and c parameters + 1)
@@ -510,7 +578,7 @@ Function fit_aic(obs As Range, est As Range, k As Integer, Optional bOrder2 = Tr
 ' Note: by itself, AIC values have no meaning. AIC is meant to be used to
 ' compare between models, where the best model is one with the lowest AIC value.
 ' Ref: Burnham, K. P., and Anderson, D. R. (2002). Model Selection and Multimodel Inference: A practical information-theoretic approach (2nd ed.). Springer-Verlag, NY.
-' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261Â–304.
+' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261–304.
 '
    Dim co() As Variant, cp() As Variant
    aic = FillInValues(obs, est, co, cp)
@@ -520,7 +588,7 @@ Function fit_aic(obs As Range, est As Range, k As Integer, Optional bOrder2 = Tr
    
    Dim rss As Double
    rss = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       rss = rss + (cp(i) - co(i)) ^ 2
    Next i
@@ -537,7 +605,7 @@ Function fit_aic(obs As Range, est As Range, k As Integer, Optional bOrder2 = Tr
 
 End Function
 
-Function fit_bic(obs As Range, est As Range, k As Integer)
+Function fit_bic(obs As Range, est As Range, k As Long)
 ' Bayesian information criterion (BIC)
 ' Parameters: obs = observed values; est = estimated (predicted) values;
 ' Parameters: k = no. of model parameters plus one
@@ -545,7 +613,7 @@ Function fit_bic(obs As Range, est As Range, k As Integer)
 ' Note: by itself, BIC values have no meaning. BIC is meant to be used to
 ' compare between models, where the best model is one with the lowest BIC value.
 ' Ref: Burnham, K. P., and Anderson, D. R. (2002). Model Selection and Multimodel Inference: A practical information-theoretic approach (2nd ed.). Springer-Verlag, NY.
-' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261Â–304.
+' Ref: Burnham, K. P., and Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33: 261–304.
 '
    Dim co() As Variant, cp() As Variant
    aic = FillInValues(obs, est, co, cp)
@@ -555,7 +623,7 @@ Function fit_bic(obs As Range, est As Range, k As Integer)
    
    Dim rss As Double
    rss = 0#
-   Dim i As Integer
+   Dim i As Long
    For i = LBound(co) To UBound(co)
       rss = rss + (cp(i) - co(i)) ^ 2
    Next i
@@ -567,3 +635,107 @@ Function fit_bic(obs As Range, est As Range, k As Integer)
    fit_bic = -2 * Log(mle) + k * Log(n)
 
 End Function
+
+Function fit_theilu2(naive As Range, model As Range)
+' Theil's coefficient of inequality (UII, 2nd version)
+' Parameters: naive = naive values; est = model estimated values
+' Range: 0 to +INF
+' Compared to naive estimates (guessing), model: < 1 = is better, 1 = is no better/worse, >1 = is worse
+' Ref: Theil, H. (1958). Economic Forecasts and Policy. Amsterdam: North Holland.
+' Ref: Thiel, H. (1966). Applied Economic Forecasting. Chicago: Rand McNally.
+'
+   Dim co() As Variant, cp() As Variant
+   fit_theilu2 = FillInValues(obs, est, co, cp)
+   If fit_theilu2 <> 0 Then
+      Exit Function
+   End If
+   
+   Dim n1 As Double, n2 As Double
+   n1 = 0#
+   n2 = 0#
+   Dim i As Long
+   For i = LBound(co) To UBound(co) - 1
+      n1 = n1 + ((cp(i + 1) - co(i + 1)) / co(i)) ^ 2
+      n2 = n2 + ((co(i + 1) - co(i)) / co(i)) ^ 2
+   Next i
+   fit_theilu2 = (n1 / n2) ^ 0.5
+
+End Function
+
+Function fit_mape(obs As Range, est As Range)
+' Mean Absolute Percentage Error (MAPE) |(O-P) / O|
+' Parameters: obs = observed values; est = estimated (predicted) values
+' Range: 0 to +INF
+' Best fit = 0
+'
+   Dim co() As Variant, cp() As Variant
+   fit_mape = FillInValues(obs, est, co, cp)
+   If fit_mape <> 0 Then
+      Exit Function
+   End If
+   
+   Dim n1 As Double
+   n1 = 0#
+   Dim i As Long
+   For i = LBound(co) To UBound(co)
+      n1 = n1 + Abs((co(i) - cp(i)) / co(i))
+   Next i
+   fit_mape = 100 * n1 / (UBound(co) - LBound(co) + 1)
+
+End Function
+
+Function fit_mdape(obs As Range, est As Range)
+' Median Absolute Percentage Error (MdAPE) |(O-P) / O|
+' Note: Like MAPE except median is used instead of mean (average).
+' Parameters: obs = observed values; est = estimated (predicted) values
+' Range: 0 to +INF
+' Best fit = 0
+'
+   Dim co() As Variant, cp() As Variant
+   fit_mdape = FillInValues(obs, est, co, cp)
+   If fit_mdape <> 0 Then
+      Exit Function
+   End If
+   
+   Dim n1 As Double
+   n1 = 0#
+   Dim i As Long
+   
+   Dim arr()
+   ReDim arr(UBound(co))
+   
+   For i = LBound(co) To UBound(co)
+      arr(i) = Abs((co(i) - cp(i)) / co(i))
+   Next i
+   
+   fit_mdape = 100 * Median(arr)
+
+End Function
+
+Function fit_maape(obs As Range, est As Range)
+' Mean Arctangent Absolute Percentage Error (MAPE) |(O-P) / O|
+' Parameters: obs = observed values; est = estimated (predicted) values
+' Range: 0 radians to pi/2
+' Note: The mean error is depicted as an angle between observed and estimated values.
+' Note: Zero angle means perfect agreement between observed and estimated values.
+' Note: Angles that are increasingly large denote increasingly large differences between observed and estimated values.
+' Best fit = 0 radians, Worst fit = pi/2 (max. angle or observed are perpendicular to estimated values)
+' Ref: Kim, S. and Kim, H. (2016). A new metric of absolute percentage error for intermittent demand forecasts. International Journal of Forecasting, 32(3): 669-679.
+'
+   Dim co() As Variant, cp() As Variant
+   fit_maape = FillInValues(obs, est, co, cp)
+   If fit_maape <> 0 Then
+      Exit Function
+   End If
+   
+   Dim n1 As Double
+   n1 = 0#
+   Dim i As Long
+   For i = LBound(co) To UBound(co)
+      n1 = n1 + Atn(Abs((co(i) - cp(i)) / co(i)))
+   Next i
+   fit_maape = n1 / (UBound(co) - LBound(co) + 1)
+
+End Function
+
+
