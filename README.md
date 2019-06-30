@@ -6,10 +6,11 @@ Author: Christopher Teh Boon Sung, Uni. Putra Malaysia
 
 Contact: christeh@yahoo.com; www.christopherteh.com
 
-Initial release: June 6, 2019
+Initial Release: June 6, 2019
+Updated: June 30, 2019
 
 
-MIT-licensed:
+MIT -licensed:
 *  Free to use, copy, share, and modify
 *  Give credit to the developer somewhere in your software code or documentation
 
@@ -17,8 +18,8 @@ MIT-licensed:
 List of GoF indexes (and the names of their functions in brackets):
 1.  Mean Absolute Error (`fit_mae`)
 1.  Normalized Mean Absolute Error (`fit_nmae`)
-1.  Mean Bias Error (`fit_mbe`)
-1.  Normalized Mean Bias Error (`fit_nmbe`)
+1.  Mean Bias Error (P-O) (`fit_mbe`)
+1.  Normalized Mean Bias Error (P-O) (`fit_nmbe`)
 1.  Root Mean Square Error (`fit_rmse`)
 1.  Original Index of Agreement (`fit_d`)
 1.  New (Refined) Index of Agreement (`fit_dr`)
@@ -31,6 +32,9 @@ List of GoF indexes (and the names of their functions in brackets):
 1.  Persistence Index (`fit_pi`)
 1.  Akaike Information Criterion (AIC) (`fit_aic`)
 1.  Bayesian Information Criterion (BIC) (`fit_bic`)
+1.  Theil's U2 Coefficient of Inequality (UII) (`fit_theilu2`)
+1.  Mean Absolute Percentage Error (MAPE) (`fit_mape`)
+1.  Median Absolute Percentage Error (MAPE) (`fit_mdape`)
 
 
 Note:
@@ -48,4 +52,3 @@ Usage:
 * To use the MBE function, type in `=fit_mbe(A1:A10, B1:B10)`, where `A1:A10` is the range of cells containing the observed (measured) values and `B1::B10` the estimated (predicted) values. Other GoF functions are used in the same way, except for AIC and BIC functions.
 * To use the AIC function, type in `=fit_aic(A1:A10, B1:B10, 3, True)` where `A1:A10` and `B1:B10` contain the observed and estimated values, respectively; the third argument (value `3`) is the number of model parameters plus one (e.g., simple linear regression equation y = mx + c has 3 model parameters: m, c, and plus one); and the last parameter is True (by default) for second-order AIC. Set to False for first order AIC (use for large samples).
 * The BIC function is used in the same way as the AIC function, except the BIC function is `fit_bic` and it has no fourth parameter, e.g., `=fit_bic(A1:A10, B1:B10, 3)`.
-  
