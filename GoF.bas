@@ -9,7 +9,7 @@ Attribute VB_Name = "GoF"
 '
 ' Initial Release: June 6, 2019
 '
-' Updated: July 29, 2020
+' Updated: Oct. 25, 2021
 '
 '
 ' MIT -licensed:
@@ -38,7 +38,9 @@ Attribute VB_Name = "GoF"
 ' 1.  Akaike Information Criterion (AIC) (`fit_aic`)
 ' 1.  Bayesian Information Criterion (BIC) (`fit_bic`)
 ' 1.  Theil's U2 Coefficient of Inequality (UII) (`fit_theilu2`)
-' 1.  Kling-Gupta Efficiency (KGE) (`fit_kge`)
+' 1.  Original (2009) Kling-Gupta Efficiency (KGE) (`fit_kge`)
+' 1.  Modified (2012) Kling-Gupta Efficiency (KGE 2012) (`fit_kge2012`)
+' 1.  Spearman's rank correlation (`fit_scorrel`)
 '
 '
 ' Note:
@@ -64,8 +66,8 @@ Private Function FillInValues(obs As Range, est As Range, co As Variant, cp As V
     ' Returns 0 if pairwise values have been collected and are valid. A return of any other value indicates one or more cells are invalid.
     '
     Dim sz As Long
-    sz = obs.Count
-    If sz <> est.Count Or sz < 2 Then
+    sz = obs.count
+    If sz <> est.count Or sz < 2 Then
         FillInValues = CVErr(xlErrValue)         ' unequal or insufficient size
         Exit Function
     End If
@@ -126,20 +128,20 @@ Private Function Average(ar() As Variant)
 
 End Function
 
-Private Function Correlation(X() As Variant, y() As Variant)
+Private Function Correlation(x() As Variant, y() As Variant)
     ' ** Internal use **
     ' Returns the correlation coefficient of an array
     '
     Dim sum As Double, meanx As Double, meany As Double
     sum = 0#
-    meanx = Average(X)
+    meanx = Average(x)
     meany = Average(y)
     Dim i As Long
-    For i = LBound(X) To UBound(X)
-        sum = sum + ((X(i) - meanx) * (y(i) - meany))
+    For i = LBound(x) To UBound(x)
+        sum = sum + ((x(i) - meanx) * (y(i) - meany))
     Next i
-    sum = sum / (UBound(X) - LBound(X))
-    Correlation = sum / (StdDev(X) * StdDev(y))
+    sum = sum / (UBound(x) - LBound(x))
+    Correlation = sum / (StdDev(x) * StdDev(y))
 
 End Function
 
@@ -221,6 +223,79 @@ Private Function Median(ar() As Variant)
    
     Median = ans
    
+End Function
+
+Private Function RankAvg(v As Variant, x() As Variant, Optional order As Integer = 0) As Double
+    ' ** Internal use **
+    ' Returns the rank of a number against a list of other other numeric values.
+    ' When values contain duplicates, this function will assign an average rank to each set of duplicates.
+    ' Parameters:
+    '   v = value to be ranked
+    '   x = array (must already be sorted from smallest to largest value)
+    '   order = 0 means largest value is ranked #1
+    '   order = 1 means smallest value is ranked #1
+    '
+    Dim sz As Long
+    sz = UBound(x) - LBound(x) + 1
+    
+    Dim total As Long, count As Long, pos As Long
+    total = 0
+    count = 0
+    pos = LBound(x)
+    
+    While pos <= UBound(x)
+        If v < x(pos) Then
+            pos = UBound(x)
+        ElseIf v = x(pos) Then
+            count = count + 1
+            If order = 0 Then
+                total = total + sz - (pos - LBound(x))
+            Else
+                total = total + (pos - LBound(x)) + 1
+            End If
+        End If
+        pos = pos + 1
+    Wend
+    
+    If count > 0 Then
+        RankAvg = total / count
+    Else
+        RankAvg = -1    ' value not found in array x
+    End If
+
+End Function
+
+Function fit_scorrel(obs As Range, est As Range)
+    ' Spearman's rank correlation (non-parametric)
+    ' Parameters: obs = observed values; est = estimated (predicted) values
+    ' Range: -1 to +1
+    '
+    Dim co() As Variant, cp() As Variant
+    fit_scorrel = FillInValues(obs, est, co, cp)
+    If fit_scorrel <> 0 Then
+        Exit Function
+    End If
+    
+    Dim sorted_co() As Variant, sorted_cp() As Variant
+    sorted_co = co
+    sorted_cp = cp
+    
+    Call Quicksort(sorted_co, LBound(co), UBound(co))
+    Call Quicksort(sorted_cp, LBound(cp), UBound(cp))
+    
+    Dim nr As Long, i As Long
+    nr = UBound(co) - LBound(co)
+    Dim cor() As Variant, cpr() As Variant
+    ReDim cor(nr)
+    ReDim cpr(nr)
+   
+    For i = 0 To nr
+        cor(i) = RankAvg(co(i), sorted_co)
+        cpr(i) = RankAvg(cp(i), sorted_cp)
+    Next i
+    
+    fit_scorrel = Correlation(cor, cpr)
+
 End Function
 
 Function fit_mae(obs As Range, est As Range)
@@ -415,7 +490,7 @@ Function fit_d(obs As Range, est As Range)
     ' Parameters: obs = observed values; est = estimated (predicted) values
     ' Range: 0 to 1
     ' Best fit = 1, Worst fit = 0
-    ' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184–194.
+    ' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184â€“194.
     '
     Dim co() As Variant, cp() As Variant
     fit_d = FillInValues(obs, est, co, cp)
@@ -442,7 +517,7 @@ Function fit_dr(obs As Range, est As Range)
     ' Range: -1 to 1
     ' Best fit = 1, Worst fit = -1 (perhaps due to lack of data/variation)
     ' Ref: Willmott, C. J., Robeson, S. M., & Matsuura, K. (2012). A refined index of model performance, International Journal of Climatolology, 32, 2088-2094.
-    ' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184–194.
+    ' Ref: Willmott, C. J. (1981). On the validation of models. Physical Geography, 2, 184â€“194.
     '
     Dim co() As Variant, cp() As Variant
     fit_dr = FillInValues(obs, est, co, cp)
@@ -500,7 +575,7 @@ Function fit_nse(obs As Range, est As Range)
     ' Parameters: obs = observed values; est = estimated (predicted) values
     ' Range: -INF to 1
     ' Best fit = 1, >0.75 for very good; 0.75-0.65 for good and 0.65-0.50 for satisfactory ratings
-    ' Ref: Nash, J. E., & Sutcliffe, J. V. (1970). River flow forecasting through conceptual models part I — A discussion of principles. Journal of Hydrology, 10, 282–290.
+    ' Ref: Nash, J. E., & Sutcliffe, J. V. (1970). River flow forecasting through conceptual models part I â€” A discussion of principles. Journal of Hydrology, 10, 282â€“290.
     '
     Dim co() As Variant, cp() As Variant
     fit_nse = FillInValues(obs, est, co, cp)
@@ -548,7 +623,7 @@ End Function
 Function fit_fb(obs As Range, est As Range)
     ' Fractional bias
     ' Parameters: obs = observed values; est = estimated (predicted) values
-    ' Range: -INF to +INF
+    ' Range: -2 to +2
     ' Best fit = 0, between -0.5 and +0.5 acceptable
     '
     Dim co() As Variant, cp() As Variant
@@ -598,7 +673,7 @@ Function fit_mielke(obs As Range, est As Range)
     ' Range: -1 to 1
     ' Best fit = 1
     ' Ref: Duveiller, G., Fasbender, D., & Meroni, M. (2016). Revisiting the concept of a symmetric index of agreement for continuous datasets. Scientific Reports, 6(19401), 1-14.
-    ' Ref: Mielke, P. (1984). Meteorological applications of permutation techniques based on distance functions. In Krishnaiah, P. & Sen, P. (eds.). Handbook of Statistics Vol. 4, 813–830 (Elsevier, Amsterdam, The Netherlands.
+    ' Ref: Mielke, P. (1984). Meteorological applications of permutation techniques based on distance functions. In Krishnaiah, P. & Sen, P. (eds.). Handbook of Statistics Vol. 4, 813â€“830 (Elsevier, Amsterdam, The Netherlands.
     '
     Dim co() As Variant, cp() As Variant
     fit_mielke = FillInValues(obs, est, co, cp)
@@ -623,7 +698,7 @@ Function fit_pi(obs As Range, est As Range)
     ' Parameters: obs = observed values; est = estimated (predicted) values
     ' Range: -INF to 1
     ' Best fit = 1, > 0 satisfactory, <= 0 poor
-    ' Ref: Gupta, H. V., Sorooshian, S., & Yapo, P. O. (1998). Toward improved calibration of hydrologic models: multiple and non-commensurable measures of information. Water Resources Research, 34, 751–763.
+    ' Ref: Gupta, H. V., Sorooshian, S., & Yapo, P. O. (1998). Toward improved calibration of hydrologic models: multiple and non-commensurable measures of information. Water Resources Research, 34, 751â€“763.
     '
     Dim co() As Variant, cp() As Variant
     fit_pi = FillInValues(obs, est, co, cp)
@@ -644,14 +719,14 @@ Function fit_pi(obs As Range, est As Range)
 End Function
 
 Function fit_aic(obs As Range, est As Range, k As Long, Optional bOrder2 = True)
-    ' Akaike’s Information Criterion (AIC)
+    ' Akaikeâ€™s Information Criterion (AIC)
     ' Parameters: obs = observed values; est = estimated (predicted) values;
     ' Parameters: k = no. of model parameters plus one; bOrder2 = True for second-order AIC, else False for first-order AIC
     ' Example: a simple linear regression equation, y = mx + c, has 3 parameters (m and c parameters + 1)
     ' Returns the second-order AIC if bOrder2 is True (default), else first-order.
     ' Note: by itself, AIC has no meaning. AIC is meant to be used to compare between models, where the best model is one with the lowest AIC value.
     ' Ref: Burnham, K. P., & Anderson, D. R. (2002). Model Selection and Multimodel Inference: A practical information-theoretic approach (2nd ed.). Springer-Verlag, NY.
-    ' Ref: Burnham, K. P., & Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33, 261–304.
+    ' Ref: Burnham, K. P., & Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33, 261â€“304.
     '
     Dim co() As Variant, cp() As Variant
     aic = FillInValues(obs, est, co, cp)
@@ -685,11 +760,11 @@ Function fit_bic(obs As Range, est As Range, k As Long)
     ' Example: a simple linear regression equation, y = mx + c, has 3 parameters (m and c parameters + 1)
     ' Note: by itself, BIC has no meaning. BIC is meant to be used to compare between models, where the best model is one with the lowest BIC value.
     ' Ref: Burnham, K. P., & Anderson, D. R. (2002). Model Selection and Multimodel Inference: A practical information-theoretic approach (2nd ed.). Springer-Verlag, NY.
-    ' Ref: Burnham, K. P., & Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33, 261–304.
+    ' Ref: Burnham, K. P., & Anderson, D. R. (2004). Multimodel inference: understanding AIC and BIC in Model Selection. Sociological Methods & Research, 33, 261â€“304.
     '
     Dim co() As Variant, cp() As Variant
-    aic = FillInValues(obs, est, co, cp)
-    If aic <> 0 Then
+    bic = FillInValues(obs, est, co, cp)
+    If bic <> 0 Then
         Exit Function
     End If
    
@@ -717,7 +792,7 @@ Function fit_theilu2(naive As Range, model As Range)
     ' Ref: Thiel, H. (1966). Applied Economic Forecasting. Chicago, Rand McNally.
     '
     Dim co() As Variant, cp() As Variant
-    fit_theilu2 = FillInValues(obs, est, co, cp)
+    fit_theilu2 = FillInValues(naive, model, co, cp)
     If fit_theilu2 <> 0 Then
         Exit Function
     End If
@@ -761,12 +836,12 @@ Function fit_maape(obs As Range, est As Range)
 End Function
 
 Function fit_kge(obs As Range, est As Range)
-    ' Kling-Gupta Efficiency (KGE)
+    ' Original (2009) Kling-Gupta Efficiency (KGE)
     ' Parameters: obs = observed values; est = estimated (predicted) values
     ' Range: -INF to 1
     ' Note: Should be at least > -0.41 (KGE = -0.41 means prediction values are all constant equal to the observed mean, so predictions have zero variation and zero correlation with measurements)
     ' Best fit = 1
-    ' Ref: Gupta, H. V., Kling, H., Yilmaz, K. K., & Martinez, G. F. (2009). Decomposition of the mean squared error and NSE performance criteria: Implications for improving hydrological modelling. Journal of Hydrology, 377, 80–91.
+    ' Ref: Gupta, H. V., Kling, H., Yilmaz, K. K., & Martinez, G. F. (2009). Decomposition of the mean squared error and NSE performance criteria: Implications for improving hydrological modelling. Journal of Hydrology, 377, 80â€“91.
     ' Ref: Knoben, W. J. M., Freer, J. E., & Woods, R. A. (2019). Technical note: Inherent benchmark or not? Comparing Nash-Sutcliffe and Kling-Gupta efficiency scores. Hydrology and Earth System Science, 23(10), 4323-4331.
     '
     Dim co() As Variant, cp() As Variant
@@ -777,13 +852,40 @@ Function fit_kge(obs As Range, est As Range)
    
     Dim sdx As Double, sdy As Double, meanx As Double, meany As Double, r As Double
     r = Correlation(co, cp)
-    sdx = StdDev(co)
-    sdy = StdDev(cp)
     meanx = Average(co)
     meany = Average(cp)
+    sdx = StdDev(co)
+    sdy = StdDev(cp)
     Dim alpha As Double
-    alpha = (r - 1) ^ 2 + (sdy / sdx - 1) ^ 2 + (meany / meanx - 1) ^ 2
+    alpha = (r - 1) ^ 2 + (meany / meanx - 1) ^ 2 + (sdy / sdx - 1) ^ 2
     fit_kge = 1 - alpha ^ 0.5
 
 End Function
 
+Function fit_kge2012(obs As Range, est As Range)
+    ' Modified (2012) Kling-Gupta Efficiency (KGE)
+    ' Uses CV instead of SD for variability ratio to avoid cross correlation between the bias and variability ratio
+    ' Parameters: obs = observed values; est = estimated (predicted) values
+    ' Range: -INF to 1
+    ' Note: Should be at least > -0.41 (KGE = -0.41 means prediction values are all constant equal to the observed mean, so predictions have zero variation and zero correlation with measurements)
+    ' Best fit = 1
+    ' Ref: Kling, H., Fuchs, M., & Paulin, M. (2012). Runoff conditions in the upper Danube basin under an ensemble of climate change scenarios. Journal of Hydrology, 424, 264-277.
+    ' Ref: Gupta, H. V., Kling, H., Yilmaz, K. K., & Martinez, G. F. (2009). Decomposition of the mean squared error and NSE performance criteria: Implications for improving hydrological modelling. Journal of Hydrology, 377, 80â€“91.
+    '
+    Dim co() As Variant, cp() As Variant
+    fit_kge2012 = FillInValues(obs, est, co, cp)
+    If fit_kge2012 <> 0 Then
+        Exit Function
+    End If
+   
+    Dim cvx As Double, cvy As Double, meanx As Double, meany As Double, r As Double
+    r = Correlation(co, cp)
+    meanx = Average(co)
+    meany = Average(cp)
+    cvx = StdDev(co) / meanx    ' CV instead of SD as in the original KGE index (2009)
+    cvy = StdDev(cp) / meany
+    Dim alpha As Double
+    alpha = (r - 1) ^ 2 + (meany / meanx - 1) ^ 2 + (cvy / cvx - 1) ^ 2
+    fit_kge2012 = 1 - alpha ^ 0.5
+
+End Function
